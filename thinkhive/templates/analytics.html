@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analytics — ThinkHive</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  {% set back = '/student' if session.role == 'student' else '/faculty' %}
+  <nav class="navbar">
+    <a href="{{ back }}" class="navbar-brand"><span>🐝</span> ThinkHive</a>
+    <div class="navbar-right">
+      <span class="nav-user">👤 {{ session.name }}</span>
+      <div class="settings-menu">
+        <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
+        <div class="settings-dropdown" id="settingsDropdown">
+          <a href="/settings">⚙️ &nbsp;Settings &amp; Profile</a>
+          <a href="/signup">➕ &nbsp;Create New Account</a>
+          <div class="divider"></div>
+          <a href="/logout" class="danger-item">🚪 &nbsp;Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <p class="page-title">📊 Analytics Dashboard</p>
+    <p class="page-sub">Insights across all submitted projects.</p>
+
+    <!-- KPI Row -->
+    <div class="stats-row" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+      <div class="stat-card">
+        <div class="num">{{ total }}</div>
+        <div class="label">Total Projects</div>
+      </div>
+      <div class="stat-card accent">
+        <div class="num">{{ reviewed }}</div>
+        <div class="label">Reviewed</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="num">{{ total - reviewed }}</div>
+        <div class="label">Pending</div>
+      </div>
+      <div class="stat-card" style="border-top-color:#6f42c1">
+        <div class="num" style="color:#6f42c1">{{ avg_rating }}</div>
+        <div class="label">Avg Rating / 5</div>
+      </div>
+      <div class="stat-card" style="border-top-color:#0d6efd">
+        <div class="num" style="color:#0d6efd;font-size:1rem;padding-top:6px">{{ most_active }}</div>
+        <div class="label">Most Active Domain</div>
+      </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+
+      <div class="chart-card">
+        <div class="chart-title">Projects per Domain</div>
+        <canvas id="domainChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Submission Trend (Monthly)</div>
+        <canvas id="trendChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Average Rating by Domain</div>
+        <canvas id="ratingChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Projects per Department</div>
+        <canvas id="deptChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Phase Distribution</div>
+        <canvas id="phaseChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Software vs Hardware</div>
+        <canvas id="natureChart"></canvas>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const COLORS = [
+      '#1a6b3c','#2d9e5f','#f0a500','#dc3545','#0d6efd',
+      '#6f42c1','#20c997','#fd7e14','#e83e8c','#17a2b8',
+      '#6c757d','#28a745','#ffc107','#007bff'
+    ];
+
+    function makeChart(id, type, labels, data, opts={}) {
+      const ctx = document.getElementById(id);
+      if (!ctx) return;
+      new Chart(ctx, {
+        type,
+        data: {
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: type === 'line' ? 'rgba(26,107,60,0.15)' : COLORS,
+            borderColor: type === 'line' ? '#1a6b3c' : COLORS,
+            borderWidth: type === 'line' ? 2 : 1,
+            fill: type === 'line',
+            tension: 0.4,
+            pointBackgroundColor: '#1a6b3c',
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: type === 'doughnut' || type === 'pie' } },
+          scales: (type === 'bar' || type === 'line') ? {
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+          } : {},
+          ...opts
+        }
+      });
+    }
+
+    makeChart('domainChart',  'bar',       {{ domain_labels|safe }}, {{ domain_counts|safe }});
+    makeChart('trendChart',   'line',      {{ trend_labels|safe }},  {{ trend_counts|safe }});
+    makeChart('ratingChart',  'bar',       {{ rating_labels|safe }}, {{ rating_values|safe }});
+    makeChart('deptChart',    'bar',       {{ dept_labels|safe }},   {{ dept_counts|safe }});
+    makeChart('phaseChart',   'doughnut',  {{ phase_labels|safe }},  {{ phase_counts|safe }});
+    makeChart('natureChart',  'pie',       {{ nature_labels|safe }}, {{ nature_counts|safe }});
+
+    function toggleSettings() {
+      document.getElementById('settingsDropdown').classList.toggle('open');
+    }
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.settings-menu'))
+        document.getElementById('settingsDropdown').classList.remove('open');
+    });
+  </script>
+</body>
+</html>

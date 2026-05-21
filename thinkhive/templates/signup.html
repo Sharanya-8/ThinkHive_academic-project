@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create Account - ThinkHive</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card" style="max-width:520px">
+      <div class="auth-logo">
+        <div class="logo-icon">🐝</div>
+        <h1>ThinkHive</h1>
+        <p>Create your account to get started</p>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ 'success' if cat == 'success' else 'error' }}">
+            {{ '✅' if cat == 'success' else '⚠️' }} {{ msg }}
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      <form method="POST" autocomplete="off">
+        <div class="section-label">Account Info</div>
+        <div class="form-group">
+          <label>Full Name <span class="req">*</span></label>
+          <input name="name" placeholder="e.g. Ravi Kumar" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Username <span class="req">*</span></label>
+            <input name="username" placeholder="Choose a username" required>
+          </div>
+          <div class="form-group">
+            <label>Password <span class="req">*</span></label>
+            <input type="password" name="password" placeholder="Min. 6 characters" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" placeholder="your@email.com">
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input name="phone" placeholder="10-digit number">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Register As <span class="req">*</span></label>
+          <select name="role" id="roleSelect" onchange="toggleFields()">
+            <option value="student">Student</option>
+            <option value="faculty">Faculty</option>
+          </select>
+        </div>
+
+        <div id="studentFields">
+          <div class="section-label">Student Details</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Roll Number <span class="req">*</span></label>
+              <input name="roll" placeholder="e.g. 22CS001">
+            </div>
+            <div class="form-group">
+              <label>Year <span class="req">*</span></label>
+              <select name="year">
+                <option value="">Select Year</option>
+                {% for y in years %}
+                <option value="{{ y }}" style="background:#fff;color:#1e293b">{{ y }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Department <span class="req">*</span></label>
+            <select name="department">
+              <option value="">Select Department</option>
+              {% for d in departments %}
+              <option value="{{ d }}" style="background:#fff;color:#1e293b">{{ d }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div id="facultyFields" style="display:none">
+          <div class="section-label">Faculty Details</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Teacher ID <span class="req">*</span></label>
+              <input name="teacher_id" placeholder="e.g. FAC2024001">
+            </div>
+            <div class="form-group">
+              <label>Section / Coordinator</label>
+              <input name="coordinator" placeholder="e.g. CSE-A">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Department</label>
+            <select name="department">
+              <option value="">Select Department</option>
+              {% for d in departments %}
+              <option value="{{ d }}" style="background:#fff;color:#1e293b">{{ d }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block mt-2">Create Account</button>
+      </form>
+      <div class="auth-footer">
+        Already have an account? <a href="/login">Sign in here</a>
+      </div>
+    </div>
+  </div>
+  <script>
+    function toggleFields() {
+      const role = document.getElementById('roleSelect').value;
+      document.getElementById('studentFields').style.display = role === 'student' ? 'block' : 'none';
+      document.getElementById('facultyFields').style.display = role === 'faculty' ? 'block' : 'none';
+    }
+  </script>
+</body>
+</html>

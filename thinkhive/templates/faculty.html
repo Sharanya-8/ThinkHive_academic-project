@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Faculty Dashboard — ThinkHive</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <div class="brand-icon">🐝</div> ThinkHive
+    </div>
+    <div class="navbar-right">
+      <a href="/analytics" class="btn btn-ghost btn-sm">📊 Analytics</a>
+      <span class="nav-user">{{ session.name }}</span>
+      <div class="settings-menu">
+        <button class="settings-btn" onclick="toggleSettings()" title="Settings">⚙</button>
+        <div class="settings-dropdown" id="settingsDropdown">
+          <a href="/settings">⚙️ Settings &amp; Profile</a>
+          <a href="/signup">➕ Create New Account</a>
+          <div class="divider"></div>
+          <a href="/logout" class="danger-item">🚪 Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ 'success' if cat == 'success' else 'error' }}">
+          {{ '✅' if cat == 'success' else '⚠️' }} {{ msg }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="page-header">
+      <p class="page-title">Faculty Dashboard</p>
+      <p class="page-sub">Review student projects, track phases, and schedule next visits.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="num">{{ stats.total }}</div>
+        <div class="label">Total Projects</div>
+      </div>
+      <div class="stat-card accent">
+        <div class="num">{{ stats.reviewed }}</div>
+        <div class="label">Reviewed</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="num">{{ stats.pending }}</div>
+        <div class="label">Pending Review</div>
+      </div>
+      <div class="stat-card" style="border-top-color:#6f42c1">
+        <div class="num" style="color:#6f42c1">{{ stats.visited }}</div>
+        <div class="label">Groups Visited</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <form method="GET" class="filter-bar">
+      <div>
+        <label>Department</label>
+        <select name="dept" onchange="this.form.submit()">
+          <option value="">All Departments</option>
+          {% for d in departments %}
+          <option value="{{ d }}" {{ 'selected' if dept_filter == d }}>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Type</label>
+        <select name="type" onchange="this.form.submit()">
+          <option value="">All Types</option>
+          {% for pt in project_types %}
+          <option value="{{ pt }}" {{ 'selected' if type_filter == pt }}>{{ pt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Nature</label>
+        <select name="nature" onchange="this.form.submit()">
+          <option value="">All Nature</option>
+          <option value="Software" {{ 'selected' if nature_filter == 'Software' }}>💻 Software</option>
+          <option value="Hardware" {{ 'selected' if nature_filter == 'Hardware' }}>🔧 Hardware</option>
+          <option value="Software + Hardware" {{ 'selected' if nature_filter == 'Software + Hardware' }}>⚡ SW + HW</option>
+        </select>
+      </div>
+      <div>
+        <label>Phase</label>
+        <select name="phase" onchange="this.form.submit()">
+          <option value="">All Phases</option>
+          {% for ph in phases %}
+          <option value="{{ ph }}" {{ 'selected' if phase_filter == ph }}>{{ ph }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Visit Status</label>
+        <select name="visited" onchange="this.form.submit()">
+          <option value="">All</option>
+          <option value="1" {{ 'selected' if visited_filter == '1' }}>✅ Visited</option>
+          <option value="0" {{ 'selected' if visited_filter == '0' }}>⏳ Not Visited</option>
+        </select>
+      </div>
+      <div>
+        <label>Status</label>
+        <select name="status" onchange="this.form.submit()">
+          <option value="">All Status</option>
+          <option value="Pending"  {{ 'selected' if status_filter == 'Pending' }}>Pending</option>
+          <option value="Reviewed" {{ 'selected' if status_filter == 'Reviewed' }}>Reviewed</option>
+          <option value="Approved" {{ 'selected' if status_filter == 'Approved' }}>Approved</option>
+        </select>
+      </div>
+      {% if dept_filter or type_filter or nature_filter or phase_filter or visited_filter or status_filter %}
+      <div style="align-self:flex-end">
+        <a href="/faculty" class="btn btn-outline btn-sm">✕ Clear Filters</a>
+      </div>
+      {% endif %}
+    </form>
+
+    <!-- Projects -->
+    {% if projects %}
+    <div class="projects-grid">
+      {% for p in projects %}
+      <div class="project-card {{ 'research' if p['project_type'] == 'Research Project' }}">
+
+        <!-- Header -->
+        <div class="flex-between">
+          <h4>{{ p['title'] }}</h4>
+          <span class="badge badge-status-{{ p['status']|lower|replace(' ','') }}">{{ p['status'] }}</span>
+        </div>
+
+        {% if p['description'] %}
+        <p class="project-desc">{{ p['description'][:110] }}{% if p['description']|length > 110 %}…{% endif %}</p>
+        {% endif %}
+
+        <!-- Badges -->
+        <div class="project-meta">
+          <span class="badge badge-dept">🏛️ {{ p['department'][:20] }}{% if p['department']|length > 20 %}…{% endif %}</span>
+          <span class="badge badge-domain">🔬 {{ p['domain'] }}</span>
+          <span class="badge badge-type">{{ p['project_type'] }}</span>
+          {% if p['project_nature'] %}
+          <span class="badge {{ 'badge-hw' if p['project_nature'] == 'Hardware' else 'badge-sw' }}">
+            {{ '🔧' if p['project_nature'] == 'Hardware' else '💻' }} {{ p['project_nature'] }}
+          </span>
+          {% endif %}
+        </div>
+
+        <!-- Student Info -->
+        <div class="student-info-row">
+          <span>👤 <strong>{{ p['student_name'] or 'Unknown' }}</strong></span>
+          {% if p['roll'] %}<span>🎫 {{ p['roll'] }}</span>{% endif %}
+          {% if p['student_year'] %}<span>📚 {{ p['student_year'] }}</span>{% endif %}
+          {% if p['student_email'] %}<span>✉️ {{ p['student_email'] }}</span>{% endif %}
+        </div>
+
+        <!-- Guide -->
+        {% if p['guide_name'] %}
+        <div class="guide-row">
+          <span>👨‍🏫 <strong>Guide:</strong> {{ p['guide_name'] }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Group Members -->
+        {% if members_map.get(p['id']) %}
+        <div class="members-row">
+          <span class="members-label">👥 Group:</span>
+          {% for m in members_map[p['id']] %}
+          <span class="member-chip">{{ m['name'] }}{% if m['roll'] %} <span class="member-roll">{{ m['roll'] }}</span>{% endif %}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Phase Tracker (compact) -->
+        {% if p['phase'] %}
+        {% set all_phases = [
+          "Phase 1 - Project Selection",
+          "Phase 2 - Abstract Submission",
+          "Phase 3 - Implementation Part 1",
+          "Phase 4 - Implementation Part 2",
+          "Phase 5 - Final Project",
+          "Phase 6 - Document & Report Submission",
+          "Phase 7 - Paper Submission (IEEE Format)"
+        ] %}
+        {% set cur_idx = all_phases.index(p['phase']) if p['phase'] in all_phases else 0 %}
+        <div class="phase-mini">
+          <span style="font-size:0.75rem;color:var(--muted);font-weight:600">PHASE</span>
+          <div class="phase-mini-bar">
+            {% for ph in all_phases %}
+            {% set idx = loop.index0 %}
+            <div class="phase-mini-dot {{ 'done' if idx < cur_idx else ('active' if idx == cur_idx else '') }}"
+                 title="{{ ph }}"></div>
+            {% endfor %}
+          </div>
+          <span style="font-size:0.78rem;color:var(--primary)">{{ p['phase'].split(' - ')[0].strip() }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Visit Status + Next Review -->
+        <div class="visit-row">
+          {% if p['visited'] %}
+          <span class="badge badge-visited">✅ Group Visited</span>
+          {% else %}
+          <span class="badge badge-not-visited">⏳ Not Yet Visited</span>
+          {% endif %}
+          {% if p['next_review'] %}
+          <span class="next-review-pill">📅 Next: {{ p['next_review'] }}</span>
+          {% endif %}
+        </div>
+
+        <!-- Tech Stack (Software) -->
+        {% if p['project_nature'] == 'Software' %}
+        <div class="tech-stack-row">
+          {% if p['sw_arch'] %}<span class="tech-chip arch">{{ p['sw_arch'] }}</span>{% endif %}
+          {% if p['sw_frontend'] %}
+          {% for t in p['sw_frontend'].split(',') %}{% if t.strip() %}
+          <span class="tech-chip frontend">{{ t.strip() }}</span>
+          {% endif %}{% endfor %}
+          {% endif %}
+          {% if p['sw_backend'] %}
+          {% for t in p['sw_backend'].split(',') %}{% if t.strip() %}
+          <span class="tech-chip backend">{{ t.strip() }}</span>
+          {% endif %}{% endfor %}
+          {% endif %}
+          {% if p['sw_databases'] %}<span class="tech-chip db">🗄 {{ p['sw_databases'] }}</span>{% endif %}
+        </div>
+        {% if p['sw_github'] or p['sw_demo_url'] %}
+        <div style="font-size:0.82rem;margin-top:2px">
+          {% if p['sw_github'] %}<a href="{{ p['sw_github'] }}" target="_blank">🔗 GitHub</a>&nbsp;&nbsp;{% endif %}
+          {% if p['sw_demo_url'] %}<a href="{{ p['sw_demo_url'] }}" target="_blank">🌐 Demo</a>{% endif %}
+        </div>
+        {% endif %}
+        {% elif p['project_nature'] == 'Hardware' %}
+        <div class="tech-stack-row">
+          {% if p['hw_category'] %}<span class="tech-chip arch">{{ p['hw_category'] }}</span>{% endif %}
+          {% if p['hw_microcontroller'] %}<span class="tech-chip backend">🔌 {{ p['hw_microcontroller'] }}</span>{% endif %}
+          {% if p['hw_prototype'] %}<span class="tech-chip frontend">🏗 {{ p['hw_prototype'] }}</span>{% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Existing Feedback -->
+        {% if p['feedback'] %}
+        <div class="feedback-box">
+          <div class="stars">
+            {% for i in range(p['rating']) %}★{% endfor %}{% for i in range(5 - p['rating']) %}☆{% endfor %}
+            <span style="font-size:0.8rem;color:var(--muted);margin-left:4px">{{ p['rating'] }}/5</span>
+          </div>
+          <p style="margin-top:4px">{{ p['feedback'] }}</p>
+          {% if p['review_notes'] %}
+          <p style="margin-top:4px;font-size:0.8rem;color:var(--muted)">📝 {{ p['review_notes'] }}</p>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Footer Actions -->
+        <div class="project-footer">
+          <span class="project-date">📅 {{ p['uploaded_at'][:10] if p['uploaded_at'] else '' }}</span>
+          <div class="flex">
+            <a href="/download/{{ p['filename'] }}" class="btn btn-outline btn-sm">⬇ Download</a>
+            <button class="btn btn-primary btn-sm" onclick="toggleForm({{ p['id'] }})">
+              {{ '✏️ Edit Review' if p['feedback'] else '💬 Review' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- ── REVIEW PANEL ── -->
+        <div id="form-{{ p['id'] }}" style="display:none" class="review-panel">
+          <form method="POST" action="/feedback/{{ p['id'] }}">
+
+            <div class="review-section-title">📋 Review Details</div>
+            <div class="form-group">
+              <label>Feedback / Comments <span class="req">*</span></label>
+              <textarea name="feedback" rows="3" placeholder="Write detailed feedback..." required>{{ p['feedback'] or '' }}</textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Rating</label>
+                <select name="rating" required>
+                  <option value="">Select</option>
+                  {% for r in [1,2,3,4,5] %}
+                  <option value="{{ r }}" {{ 'selected' if p['rating'] == r }}>
+                    {{ r }} — {{ ['','Poor','Fair','Good','Very Good','Excellent'][r] }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Overall Status</label>
+                <select name="status">
+                  <option value="Reviewed" {{ 'selected' if p['status'] == 'Reviewed' }}>Reviewed</option>
+                  <option value="Approved" {{ 'selected' if p['status'] == 'Approved' }}>Approved</option>
+                  <option value="Pending"  {{ 'selected' if p['status'] == 'Pending' }}>Pending</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="review-section-title">📌 Phase & Visit</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Update Phase</label>
+                <select name="phase" style="background:#fff;color:#212529">
+                  {% for ph in phases %}
+                  <option value="{{ ph }}" style="background:#fff;color:#212529" {{ 'selected' if p['phase'] == ph }}>{{ ph }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Group Visit Status</label>
+                <select name="visited">
+                  <option value="1" {{ 'selected' if p['visited'] == 1 }}>✅ Visited</option>
+                  <option value="0" {{ 'selected' if p['visited'] == 0 or not p['visited'] }}>⏳ Not Visited</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="review-section-title">📅 Schedule Next Review</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Next Review Date</label>
+                <input type="date" name="next_review" value="{{ p['next_review'] or '' }}">
+              </div>
+              <div class="form-group">
+                <label>Internal Notes (not shown to student)</label>
+                <input name="review_notes" placeholder="e.g. Needs to fix database schema" value="{{ p['review_notes'] or '' }}">
+              </div>
+            </div>
+
+            <div class="flex" style="gap:8px;margin-top:4px">
+              <button type="submit" class="btn btn-primary">✅ Save Review</button>
+              <button type="button" class="btn btn-outline" onclick="toggleForm({{ p['id'] }})">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">📭</div>
+      <p>No projects found for the selected filters.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    function toggleForm(id) {
+      const el = document.getElementById('form-' + id);
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+    function toggleSettings() {
+      document.getElementById('settingsDropdown').classList.toggle('open');
+    }
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.settings-menu'))
+        document.getElementById('settingsDropdown').classList.remove('open');
+    });
+  </script>
+</body>
+</html>

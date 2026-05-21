@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Student Dashboard - ThinkHive</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <div class="brand-icon">🐝</div> ThinkHive
+    </div>
+    <div class="navbar-right">
+      <a href="/analytics" class="btn btn-ghost btn-sm">📊 Analytics</a>
+      <span class="nav-user">{{ session.name }}</span>
+      <div class="settings-menu">
+        <button class="settings-btn" onclick="toggleSettings()" title="Settings">⚙</button>
+        <div class="settings-dropdown" id="settingsDropdown">
+          <a href="/settings">⚙️ Settings &amp; Profile</a>
+          <a href="/signup">➕ Create New Account</a>
+          <div class="divider"></div>
+          <a href="/logout" class="danger-item">🚪 Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ 'success' if cat == 'success' else 'error' }}">
+          {{ '✅' if cat == 'success' else '⚠️' }} {{ msg }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="page-header">
+      <p class="page-title">Student Dashboard</p>
+      <p class="page-sub">Upload your projects and track faculty feedback in real time.</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="num">{{ stats.total }}</div>
+        <div class="label">My Projects</div>
+      </div>
+      <div class="stat-card accent">
+        <div class="num">{{ stats.reviewed }}</div>
+        <div class="label">Reviewed</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="num">{{ stats.pending }}</div>
+        <div class="label">Awaiting Feedback</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('upload', this)">📤 Upload Project</button>
+      <button class="tab-btn" onclick="switchTab('mine', this)">📂 My Projects</button>
+      <button class="tab-btn" onclick="switchTab('all', this)">🌐 All Projects</button>
+    </div>
+
+    <!-- UPLOAD TAB -->
+    <div class="tab-pane active" id="tab-upload">
+      <div class="card" style="max-width:700px">
+        <div class="card-header"><h3>📤 Submit New Project</h3></div>
+        <form method="POST" action="/upload" enctype="multipart/form-data">
+          <div class="section-label">Basic Information</div>
+          <div class="form-group">
+            <label>Project Title <span class="req">*</span></label>
+            <input name="title" placeholder="e.g. Smart Attendance System using Face Recognition" required>
+          </div>
+          <div class="form-group">
+            <label>Description <span class="req">*</span></label>
+            <textarea name="description" rows="3" placeholder="Briefly describe your project, its objective and outcome..." required></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Department <span class="req">*</span></label>
+              <select name="department" required>
+                <option value="">Select Department</option>
+                {% for d in departments %}
+                <option value="{{ d }}" style="background:#fff;color:#1e293b">{{ d }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Year <span class="req">*</span></label>
+              <select name="year" required>
+                <option value="">Select Year</option>
+                {% for y in years %}
+                <option value="{{ y }}" style="background:#fff;color:#1e293b">{{ y }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Domain <span class="req">*</span></label>
+              <select name="domain" required>
+                <option value="">Select Domain</option>
+                {% for dom in domains %}
+                <option value="{{ dom }}" style="background:#fff;color:#1e293b">{{ dom }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Project Type <span class="req">*</span></label>
+              <select name="project_type" required>
+                <option value="">Select Type</option>
+                {% for pt in project_types %}
+                <option value="{{ pt }}" style="background:#fff;color:#1e293b">{{ pt }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="section-label">Guide &amp; Project Phase</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Guide / Mentor Name <span class="req">*</span></label>
+              <input name="guide_name" placeholder="e.g. Dr. Ramesh Kumar" required>
+            </div>
+            <div class="form-group">
+              <label>Current Phase <span class="req">*</span></label>
+              <select name="phase" required style="background:#fff;color:#1e293b">
+                <option value="" disabled selected>Select Phase</option>
+                {% for ph in phases %}
+                <option value="{{ ph }}" style="background:#fff;color:#1e293b">{{ ph }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="section-label">Project Nature <span class="req">*</span></div>
+          <div class="nature-toggle" style="grid-template-columns:1fr 1fr 1fr">
+            <label class="nature-option active" id="lbl-sw">
+              <input type="radio" name="project_nature" value="Software" checked onchange="switchNature('Software')">
+              <span class="nature-icon">💻</span>
+              <span class="nature-title">Software</span>
+              <span class="nature-desc">Web, mobile, AI/ML, desktop app, etc.</span>
+            </label>
+            <label class="nature-option" id="lbl-hw">
+              <input type="radio" name="project_nature" value="Hardware" onchange="switchNature('Hardware')">
+              <span class="nature-icon">🔧</span>
+              <span class="nature-title">Hardware</span>
+              <span class="nature-desc">Embedded, IoT, robotics, circuits, etc.</span>
+            </label>
+            <label class="nature-option" id="lbl-both">
+              <input type="radio" name="project_nature" value="Software + Hardware" onchange="switchNature('Both')">
+              <span class="nature-icon">⚡</span>
+              <span class="nature-title">Software + Hardware</span>
+              <span class="nature-desc">Combined — e.g. IoT with web dashboard, smart device, etc.</span>
+            </label>
+          </div>
+
+          <!-- SOFTWARE FIELDS -->
+          <div id="sw-fields">
+            <div class="section-label">💻 Software Details</div>
+            <div class="form-group">
+              <label>Project Architecture / Type</label>
+              <div class="radio-group">
+                {% for arch in ['Full Stack Web App','Frontend Only','Backend / API Only','Mobile App','Desktop App','AI / ML Model','CLI Tool / Script'] %}
+                <label class="radio-item">
+                  <input type="radio" name="sw_arch" value="{{ arch }}" {% if loop.first %}checked{% endif %}> {{ arch }}
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="tech-section frontend-section">
+              <div class="tech-section-header">
+                <span class="tech-icon">🎨</span>
+                <div><strong>Frontend Technologies</strong><p>What the user sees - UI, design, client-side logic</p></div>
+              </div>
+              <div class="form-group">
+                <label>Frontend Frameworks / Libraries</label>
+                <div class="checkbox-grid">
+                  {% for f in sw_frontend %}
+                  <label class="check-item"><input type="checkbox" name="sw_frontend" value="{{ f }}"> {{ f }}</label>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            <div class="tech-section backend-section">
+              <div class="tech-section-header">
+                <span class="tech-icon">⚙️</span>
+                <div><strong>Backend Technologies</strong><p>Server-side logic, APIs, data processing</p></div>
+              </div>
+              <div class="form-group">
+                <label>Backend Languages / Frameworks</label>
+                <div class="checkbox-grid">
+                  {% for b in sw_backend %}
+                  <label class="check-item"><input type="checkbox" name="sw_backend" value="{{ b }}"> {{ b }}</label>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>🗄 Database Used</label>
+                <select name="sw_database">
+                  <option value="">None / Not Applicable</option>
+                  {% for db in sw_databases %}
+                  <option value="{{ db }}" style="background:#fff;color:#1e293b">{{ db }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>☁️ Deployment / Hosting</label>
+                <select name="sw_deployment">
+                  <option value="">Select</option>
+                  {% for dep in ['Local / Localhost','AWS','Google Cloud','Azure','Heroku','Vercel / Netlify','Raspberry Pi','Not Deployed'] %}
+                  <option value="{{ dep }}" style="background:#fff;color:#1e293b">{{ dep }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>🔗 GitHub Repository URL</label>
+                <input name="sw_github" placeholder="https://github.com/username/repo">
+              </div>
+              <div class="form-group">
+                <label>🌐 Live Demo URL</label>
+                <input name="sw_demo_url" placeholder="https://yourproject.com (if available)">
+              </div>
+            </div>
+          </div>
+
+          <!-- HARDWARE FIELDS -->
+          <div id="hw-fields" style="display:none">
+            <div class="section-label">🔧 Hardware Details</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Hardware Category <span class="req">*</span></label>
+                <select name="hw_category">
+                  <option value="">Select Category</option>
+                  {% for cat in hw_categories %}
+                  <option value="{{ cat }}" style="background:#fff;color:#1e293b">{{ cat }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Primary Microcontroller / Board</label>
+                <select name="hw_microcontroller">
+                  <option value="">Select</option>
+                  {% for mc in ['Arduino Uno','Arduino Mega','Arduino Nano','Raspberry Pi 4','Raspberry Pi Zero','ESP32','ESP8266 / NodeMCU','STM32','PIC Microcontroller','FPGA','No Microcontroller','Other'] %}
+                  <option value="{{ mc }}" style="background:#fff;color:#1e293b">{{ mc }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Components / Modules Used</label>
+              <div class="checkbox-grid">
+                {% for comp in hw_components %}
+                <label class="check-item"><input type="checkbox" name="hw_components" value="{{ comp }}"> {{ comp }}</label>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Power Source</label>
+                <select name="hw_power_source">
+                  <option value="">Select</option>
+                  {% for ps in ['USB (5V)','Battery (AA/AAA)','Li-Po / Li-Ion Battery','Solar Panel','AC Mains (230V)','DC Adapter','Other'] %}
+                  <option value="{{ ps }}" style="background:#fff;color:#1e293b">{{ ps }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Prototype Status</label>
+                <select name="hw_prototype">
+                  <option value="">Select</option>
+                  {% for ps in ['Working Prototype','Partial Prototype','Simulation Only','PCB Designed','Concept / Design Stage'] %}
+                  <option value="{{ ps }}" style="background:#fff;color:#1e293b">{{ ps }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-label">👥 Group Members (Collaborators)</div>
+          <div id="members-list">
+            <div class="member-row">
+              <input name="member_name" placeholder="Member name" style="flex:2">
+              <input name="member_roll" placeholder="Roll number" style="flex:1">
+              <button type="button" class="btn btn-danger btn-sm" onclick="removeMember(this)" style="flex-shrink:0">✕</button>
+            </div>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="addMember()" style="margin-top:8px">➕ Add Member</button>
+          <p class="form-hint">Add all group members (excluding yourself). Leave blank if working alone.</p>
+
+          <div class="section-label">📁 Code Repository (Optional)</div>
+          <div class="form-group">
+            <label>Upload Code as ZIP <span style="font-size:0.75rem;color:var(--muted)">(folder structure preserved)</span></label>
+            <input type="file" name="code_zip" accept=".zip" id="codeZipInput" onchange="previewZip(this)">
+            <p class="form-hint">Zip your project folder and upload — the file tree will be shown like VS Code / GitHub. Max 50 MB.</p>
+            <div id="zip-preview" style="display:none" class="zip-preview-box">
+              <div class="zip-preview-header">📁 <span id="zip-name"></span></div>
+              <div id="zip-file-list" class="zip-file-list"></div>
+            </div>
+          </div>
+
+          <div class="section-label">Project File</div>
+          <div class="form-group">
+            <label>Upload File <span class="req">*</span></label>
+            <input type="file" name="file" required accept=".pdf,.doc,.docx,.ppt,.pptx,.zip">
+            <p class="form-hint">Accepted: PDF, DOC, DOCX, PPT, PPTX, ZIP &nbsp;·&nbsp; Max 16 MB</p>
+          </div>
+          <button type="submit" class="btn btn-primary">📤 Submit Project</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- MY PROJECTS TAB -->
+    <div class="tab-pane" id="tab-mine">
+      {% if my_projects %}
+      <div class="projects-grid">
+        {% for p in my_projects %}
+        {% set all_phases = ["Phase 1 - Project Selection","Phase 2 - Abstract Submission","Phase 3 - Implementation Part 1","Phase 4 - Implementation Part 2","Phase 5 - Final Project","Phase 6 - Document & Report Submission","Phase 7 - Paper Submission (IEEE Format)"] %}
+        {% set cur_idx = all_phases.index(p['phase']) if p['phase'] in all_phases else 0 %}
+        <div class="project-card {{ 'research' if p['project_type'] == 'Research Project' }}"
+             onclick="openModal('mine', {{ p['id'] }})">
+          <div class="flex-between">
+            <h4>{{ p['title'] }}</h4>
+            <span class="badge badge-status-{{ p['status']|lower|replace(' ','') }}">{{ p['status'] }}</span>
+          </div>
+          {% if p['description'] %}
+          <p class="project-desc">{{ p['description'][:90] }}{% if p['description']|length > 90 %}…{% endif %}</p>
+          {% endif %}
+          <div class="project-meta">
+            <span class="badge badge-dept">{{ p['department'][:20] }}{% if p['department']|length > 20 %}…{% endif %}</span>
+            <span class="badge badge-domain">{{ p['domain'] }}</span>
+            <span class="badge badge-type">{{ p['project_type'] }}</span>
+            <span class="badge {{ 'badge-hw' if p['project_nature'] == 'Hardware' else 'badge-sw' }}">{{ p['project_nature'] or 'Software' }}</span>
+          </div>
+          {% if p['guide_name'] %}
+          <div class="guide-row">
+            <span>👨‍🏫 <strong>{{ p['guide_name'] }}</strong></span>
+            <span class="badge {{ 'badge-visited' if p['visited'] else 'badge-not-visited' }}">{{ '✅ Visited' if p['visited'] else '⏳ Not Visited' }}</span>
+          </div>
+          {% endif %}
+          {% if members_map.get(p['id']) %}
+          <div class="members-row">
+            <span class="members-label">👥 Group:</span>
+            {% for m in members_map[p['id']] %}
+            <span class="member-chip">{{ m['name'] }}{% if m['roll'] %} <span class="member-roll">{{ m['roll'] }}</span>{% endif %}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if p['next_review'] %}
+          <div class="next-review-box">📅 Next Review: <strong>{{ p['next_review'] }}</strong></div>
+          {% endif %}
+          <div class="phase-mini">
+            <span style="font-size:0.72rem;color:var(--muted);font-weight:700;white-space:nowrap">PHASE {{ cur_idx + 1 }}/7</span>
+            <div class="phase-mini-bar">
+              {% for ph in all_phases %}
+              <div class="phase-mini-dot {{ 'done' if loop.index0 < cur_idx else ('active' if loop.index0 == cur_idx else '') }}"></div>
+              {% endfor %}
+            </div>
+          </div>
+          {% if p['feedback'] %}
+          <div class="feedback-box">
+            <div class="stars">{% for i in range(p['rating']) %}★{% endfor %}{% for i in range(5 - p['rating']) %}☆{% endfor %}
+              <span style="font-size:0.78rem;color:var(--muted);margin-left:4px">{{ p['rating'] }}/5</span>
+            </div>
+            <p style="margin-top:4px;font-size:0.84rem">{{ p['feedback'][:80] }}{% if p['feedback']|length > 80 %}…{% endif %}</p>
+          </div>
+          {% else %}
+          <p style="font-size:0.82rem;color:var(--muted)">⏳ Awaiting faculty feedback</p>
+          {% endif %}
+          <div class="project-footer" onclick="event.stopPropagation()">
+            <span class="project-date">📅 {{ p['uploaded_at'][:10] if p['uploaded_at'] else '' }}</span>
+            <div class="flex">
+              <a href="/download/{{ p['filename'] }}" class="btn btn-outline btn-sm">⬇ Download</a>
+              <form method="POST" action="/delete_project/{{ p['id'] }}" onsubmit="return confirm('Delete this project?')">
+                <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="icon">📂</div>
+        <p>You haven't uploaded any projects yet.</p>
+        <button class="btn btn-primary mt-2" onclick="switchTab('upload', document.querySelectorAll('.tab-btn')[0])">Upload Your First Project</button>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ALL PROJECTS TAB -->
+    <div class="tab-pane" id="tab-all">
+      <form method="GET" class="filter-bar">
+        <input type="hidden" name="tab" value="all">
+        <div>
+          <label>Department</label>
+          <select name="dept" onchange="this.form.submit()">
+            <option value="">All Departments</option>
+            {% for d in departments %}
+            <option value="{{ d }}" {{ 'selected' if dept_filter == d }} style="background:#fff;color:#1e293b">{{ d }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label>Project Type</label>
+          <select name="type" onchange="this.form.submit()">
+            <option value="">All Types</option>
+            {% for pt in project_types %}
+            <option value="{{ pt }}" {{ 'selected' if type_filter == pt }} style="background:#fff;color:#1e293b">{{ pt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% if dept_filter or type_filter %}
+        <div style="align-self:flex-end"><a href="/student?tab=all" class="btn btn-ghost btn-sm">✕ Clear</a></div>
+        {% endif %}
+      </form>
+      {% if projects %}
+      <div class="projects-grid">
+        {% for p in projects %}
+        <div class="project-card {{ 'research' if p['project_type'] == 'Research Project' }}"
+             onclick="openModal('all', {{ p['id'] }})">
+          <div class="flex-between">
+            <h4>{{ p['title'] }}</h4>
+            <span class="badge badge-status-{{ p['status']|lower|replace(' ','') }}">{{ p['status'] }}</span>
+          </div>
+          {% if p['description'] %}
+          <p class="project-desc">{{ p['description'][:90] }}{% if p['description']|length > 90 %}…{% endif %}</p>
+          {% endif %}
+          <div class="project-meta">
+            <span class="badge badge-dept">{{ p['department'][:20] }}{% if p['department']|length > 20 %}…{% endif %}</span>
+            <span class="badge badge-domain">{{ p['domain'] }}</span>
+            <span class="badge badge-type">{{ p['project_type'] }}</span>
+            <span class="badge {{ 'badge-hw' if p['project_nature'] == 'Hardware' else 'badge-sw' }}">{{ p['project_nature'] or 'Software' }}</span>
+          </div>
+          {% if p['student_name'] %}<p style="font-size:0.8rem;color:var(--muted)">👤 {{ p['student_name'] }}</p>{% endif %}
+          {% if members_map.get(p['id']) %}
+          <div class="members-row">
+            <span class="members-label">👥 Group:</span>
+            {% for m in members_map[p['id']] %}
+            <span class="member-chip">{{ m['name'] }}{% if m['roll'] %} <span class="member-roll">{{ m['roll'] }}</span>{% endif %}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if p['feedback'] %}
+          <div class="feedback-box">
+            <div class="stars">{% for i in range(p['rating']) %}★{% endfor %}{% for i in range(5 - p['rating']) %}☆{% endfor %}</div>
+            <p style="margin-top:4px;font-size:0.84rem">{{ p['feedback'][:80] }}{% if p['feedback']|length > 80 %}…{% endif %}</p>
+          </div>
+          {% endif %}
+          <div class="project-footer" onclick="event.stopPropagation()">
+            <span class="project-date">📅 {{ p['uploaded_at'][:10] if p['uploaded_at'] else '' }}</span>
+            <a href="/download/{{ p['filename'] }}" class="btn btn-outline btn-sm">⬇ Download</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="icon">🔍</div><p>No projects found.</p></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- PROJECT DETAIL MODAL -->
+  <div class="modal-overlay" id="projectModal" onclick="closeModal(event)">
+    <div class="modal" id="modalContent">
+      <div class="modal-header">
+        <h2 id="modal-title">Project Details</h2>
+        <button class="modal-close" onclick="document.getElementById('projectModal').classList.remove('open')">✕</button>
+      </div>
+      <div class="modal-body" id="modal-body">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Hidden project data for modal -->
+  <div id="project-data" style="display:none">
+    {% for p in my_projects %}
+    {% set all_phases = ["Phase 1 - Project Selection","Phase 2 - Abstract Submission","Phase 3 - Implementation Part 1","Phase 4 - Implementation Part 2","Phase 5 - Final Project","Phase 6 - Document & Report Submission","Phase 7 - Paper Submission (IEEE Format)"] %}
+    {% set cur_idx = all_phases.index(p['phase']) if p['phase'] in all_phases else 0 %}
+    <div data-id="{{ p['id'] }}" data-source="mine"
+         data-title="{{ p['title'] }}"
+         data-desc="{{ p['description'] or '' }}"
+         data-dept="{{ p['department'] or '' }}"
+         data-domain="{{ p['domain'] or '' }}"
+         data-type="{{ p['project_type'] or '' }}"
+         data-nature="{{ p['project_nature'] or 'Software' }}"
+         data-year="{{ p['year'] or '' }}"
+         data-guide="{{ p['guide_name'] or '' }}"
+         data-phase="{{ p['phase'] or '' }}"
+         data-phase-idx="{{ cur_idx }}"
+         data-status="{{ p['status'] or 'Pending' }}"
+         data-visited="{{ p['visited'] or 0 }}"
+         data-next-review="{{ p['next_review'] or '' }}"
+         data-feedback="{{ p['feedback'] or '' }}"
+         data-rating="{{ p['rating'] or 0 }}"
+         data-review-notes="{{ p['review_notes'] or '' }}"
+         data-sw-arch="{{ p['sw_arch'] or '' }}"
+         data-sw-frontend="{{ p['sw_frontend'] or '' }}"
+         data-sw-backend="{{ p['sw_backend'] or '' }}"
+         data-sw-db="{{ p['sw_databases'] or '' }}"
+         data-sw-deploy="{{ p['sw_deployment'] or '' }}"
+         data-sw-github="{{ p['sw_github'] or '' }}"
+         data-sw-demo="{{ p['sw_demo_url'] or '' }}"
+         data-hw-cat="{{ p['hw_category'] or '' }}"
+         data-hw-mc="{{ p['hw_microcontroller'] or '' }}"
+         data-hw-comp="{{ p['hw_components'] or '' }}"
+         data-hw-proto="{{ p['hw_prototype'] or '' }}"
+         data-code-zip="{{ p['code_zip'] or '' }}"
+         data-members="{{ members_map.get(p['id'], [])|tojson|e }}"
+         data-filename="{{ p['filename'] }}"
+         data-date="{{ p['uploaded_at'][:10] if p['uploaded_at'] else '' }}">
+    </div>
+    {% endfor %}
+    {% for p in projects %}
+    {% set all_phases = ["Phase 1 - Project Selection","Phase 2 - Abstract Submission","Phase 3 - Implementation Part 1","Phase 4 - Implementation Part 2","Phase 5 - Final Project","Phase 6 - Document & Report Submission","Phase 7 - Paper Submission (IEEE Format)"] %}
+    {% set cur_idx = all_phases.index(p['phase']) if p['phase'] in all_phases else 0 %}
+    <div data-id="{{ p['id'] }}" data-source="all"
+         data-title="{{ p['title'] }}"
+         data-desc="{{ p['description'] or '' }}"
+         data-dept="{{ p['department'] or '' }}"
+         data-domain="{{ p['domain'] or '' }}"
+         data-type="{{ p['project_type'] or '' }}"
+         data-nature="{{ p['project_nature'] or 'Software' }}"
+         data-year="{{ p['year'] or '' }}"
+         data-guide="{{ p['guide_name'] or '' }}"
+         data-phase="{{ p['phase'] or '' }}"
+         data-phase-idx="{{ cur_idx }}"
+         data-status="{{ p['status'] or 'Pending' }}"
+         data-visited="{{ p['visited'] or 0 }}"
+         data-next-review="{{ p['next_review'] or '' }}"
+         data-feedback="{{ p['feedback'] or '' }}"
+         data-rating="{{ p['rating'] or 0 }}"
+         data-sw-arch="{{ p['sw_arch'] or '' }}"
+         data-sw-frontend="{{ p['sw_frontend'] or '' }}"
+         data-sw-backend="{{ p['sw_backend'] or '' }}"
+         data-sw-db="{{ p['sw_databases'] or '' }}"
+         data-sw-deploy="{{ p['sw_deployment'] or '' }}"
+         data-sw-github="{{ p['sw_github'] or '' }}"
+         data-sw-demo="{{ p['sw_demo_url'] or '' }}"
+         data-hw-cat="{{ p['hw_category'] or '' }}"
+         data-hw-mc="{{ p['hw_microcontroller'] or '' }}"
+         data-hw-comp="{{ p['hw_components'] or '' }}"
+         data-hw-proto="{{ p['hw_prototype'] or '' }}"
+         data-code-zip="{{ p['code_zip'] or '' }}"
+         data-members="{{ members_map.get(p['id'], [])|tojson|e }}"
+         data-student="{{ p['student_name'] or '' }}"
+         data-filename="{{ p['filename'] }}"
+         data-date="{{ p['uploaded_at'][:10] if p['uploaded_at'] else '' }}">
+    </div>
+    {% endfor %}
+  </div>
+
+  <script>
+    const ALL_PHASES = ["Phase 1 - Project Selection","Phase 2 - Abstract Submission","Phase 3 - Implementation Part 1","Phase 4 - Implementation Part 2","Phase 5 - Final Project","Phase 6 - Document & Report Submission","Phase 7 - Paper Submission (IEEE Format)"];
+
+    function openModal(source, id) {
+      const el = document.querySelector(`#project-data [data-id="${id}"][data-source="${source}"]`);
+      if (!el) return;
+      const d = el.dataset;
+      const curIdx = parseInt(d.phaseIdx) || 0;
+      const stars = '★'.repeat(parseInt(d.rating)||0) + '☆'.repeat(5-(parseInt(d.rating)||0));
+      const phaseSteps = ALL_PHASES.map((ph, i) => {
+        const cls = i < curIdx ? 'done' : (i === curIdx ? 'active' : '');
+        const lbl = ph.split(' - ')[0];
+        return `<div class="phase-step ${cls}"><div class="phase-dot">${i < curIdx ? '✓' : (i === curIdx ? '●' : i+1)}</div><div class="phase-label">${lbl}</div></div>`;
+      }).join('');
+
+      // Tech stack — show SW, HW, or both
+      const nature = d.nature || 'Software';
+      let techHtml = '';
+      const showSW = nature === 'Software' || nature === 'Software + Hardware';
+      const showHW = nature === 'Hardware' || nature === 'Software + Hardware';
+      if (showSW) {
+        if (d.swArch)     techHtml += `<div class="modal-field"><label>Architecture</label><p>${d.swArch}</p></div>`;
+        if (d.swFrontend) techHtml += `<div class="modal-field"><label>Frontend</label><p>${d.swFrontend}</p></div>`;
+        if (d.swBackend)  techHtml += `<div class="modal-field"><label>Backend</label><p>${d.swBackend}</p></div>`;
+        if (d.swDb)       techHtml += `<div class="modal-field"><label>Database</label><p>${d.swDb}</p></div>`;
+        if (d.swDeploy)   techHtml += `<div class="modal-field"><label>Deployment</label><p>${d.swDeploy}</p></div>`;
+        if (d.swGithub)   techHtml += `<div class="modal-field"><label>GitHub</label><p><a href="${d.swGithub}" target="_blank">${d.swGithub}</a></p></div>`;
+        if (d.swDemo)     techHtml += `<div class="modal-field"><label>Live Demo</label><p><a href="${d.swDemo}" target="_blank">${d.swDemo}</a></p></div>`;
+      }
+      if (showHW) {
+        if (d.hwCat)   techHtml += `<div class="modal-field"><label>HW Category</label><p>${d.hwCat}</p></div>`;
+        if (d.hwMc)    techHtml += `<div class="modal-field"><label>Board / MCU</label><p>${d.hwMc}</p></div>`;
+        if (d.hwComp)  techHtml += `<div class="modal-field"><label>Components</label><p>${d.hwComp}</p></div>`;
+        if (d.hwProto) techHtml += `<div class="modal-field"><label>Prototype</label><p>${d.hwProto}</p></div>`;
+      }
+
+      // Group members
+      let membersHtml = '';
+      try {
+        const members = JSON.parse(d.members || '[]');
+        if (members.length) {
+          membersHtml = `<div class="modal-section">
+            <div class="modal-section-title">👥 Group Members</div>
+            <div class="members-table">
+              <div class="members-table-head"><span>Name</span><span>Roll No.</span></div>
+              ${members.map(m => `<div class="members-table-row"><span>${m.name}</span><span>${m.roll || '-'}</span></div>`).join('')}
+            </div>
+          </div>`;
+        }
+      } catch(e) {}
+
+      document.getElementById('modal-title').textContent = d.title;
+      document.getElementById('modal-body').innerHTML = `
+        <div class="modal-section">
+          <div class="modal-section-title">Overview</div>
+          <p style="font-size:0.88rem;color:#475569;line-height:1.6;margin-bottom:12px">${d.desc || 'No description provided.'}</p>
+          <div class="modal-grid">
+            <div class="modal-field"><label>Department</label><p>${d.dept}</p></div>
+            <div class="modal-field"><label>Domain</label><p>${d.domain}</p></div>
+            <div class="modal-field"><label>Project Type</label><p>${d.type}</p></div>
+            <div class="modal-field"><label>Nature</label><p>${d.nature}</p></div>
+            <div class="modal-field"><label>Year</label><p>${d.year}</p></div>
+            <div class="modal-field"><label>Status</label><p>${d.status}</p></div>
+            ${d.student ? `<div class="modal-field"><label>Student</label><p>${d.student}</p></div>` : ''}
+          </div>
+        </div>
+        ${membersHtml}
+        ${d.guide ? `
+        <div class="modal-section">
+          <div class="modal-section-title">Guide &amp; Visit</div>
+          <div class="modal-grid">
+            <div class="modal-field"><label>Guide / Mentor</label><p>${d.guide}</p></div>
+            <div class="modal-field"><label>Visit Status</label><p>${parseInt(d.visited) ? '✅ Visited' : '⏳ Not Visited'}</p></div>
+            ${d.nextReview ? `<div class="modal-field"><label>Next Review</label><p>📅 ${d.nextReview}</p></div>` : ''}
+          </div>
+        </div>` : ''}
+        <div class="modal-section">
+          <div class="modal-section-title">Project Phase</div>
+          <div class="phase-tracker"><div class="phase-steps">${phaseSteps}</div></div>
+          <p style="font-size:0.82rem;color:var(--primary);margin-top:8px;font-weight:600">${d.phase}</p>
+        </div>
+        ${techHtml ? `<div class="modal-section"><div class="modal-section-title">${nature} Stack</div><div class="modal-grid">${techHtml}</div></div>` : ''}
+        ${d.codeZip ? `
+        <div class="modal-section">
+          <div class="modal-section-title">📁 Code Repository</div>
+          <div class="code-tree-wrap" id="tree-${id}">
+            <div class="code-tree-loading">⏳ Loading file tree...</div>
+          </div>
+          <a href="/code_download/${d.codeZip}" class="btn btn-outline btn-sm" style="margin-top:10px">⬇ Download Code ZIP</a>
+        </div>` : ''}
+        ${d.feedback ? `
+        <div class="modal-section">
+          <div class="modal-section-title">Faculty Feedback</div>
+          <div class="feedback-box">
+            <div class="stars">${stars} <span style="font-size:0.8rem;color:var(--muted);margin-left:4px">${d.rating}/5</span></div>
+            <p style="margin-top:6px;font-size:0.88rem">${d.feedback}</p>
+          </div>
+        </div>` : ''}
+        <div style="padding-top:8px">
+          <a href="/download/${d.filename}" class="btn btn-primary btn-sm">⬇ Download Project File</a>
+        </div>
+      `;
+      document.getElementById('projectModal').classList.add('open');
+
+      // Load code tree if zip exists
+      if (d.codeZip) {
+        fetch(`/code_tree/${id}`)
+          .then(r => r.json())
+          .then(data => {
+            const wrap = document.getElementById(`tree-${id}`);
+            if (wrap) wrap.innerHTML = data.tree ? renderTree(data.tree, 0) : '<span style="color:var(--muted);font-size:0.82rem">No files found.</span>';
+          })
+          .catch(() => {
+            const wrap = document.getElementById(`tree-${id}`);
+            if (wrap) wrap.innerHTML = '<span style="color:var(--muted);font-size:0.82rem">Could not load file tree.</span>';
+          });
+      }
+    }
+
+    function renderTree(node, depth) {
+      let html = '';
+      for (const [key, val] of Object.entries(node)) {
+        const isFolder = Object.keys(val).length > 0;
+        const indent = depth * 16;
+        const icon = isFolder ? '📁' : getFileIcon(key);
+        html += `<div class="tree-item" style="padding-left:${indent + 8}px">
+          <span class="tree-icon">${icon}</span>
+          <span class="tree-name ${isFolder ? 'tree-folder' : ''}" ${isFolder ? `onclick="this.closest('.tree-item').classList.toggle('collapsed')"` : ''}>${key}</span>
+        </div>`;
+        if (isFolder) {
+          html += `<div class="tree-children">${renderTree(val, depth + 1)}</div>`;
+        }
+      }
+      return html;
+    }
+
+    function getFileIcon(name) {
+      const ext = name.split('.').pop().toLowerCase();
+      const map = { py:'🐍', js:'🟨', ts:'🔷', html:'🌐', css:'🎨', json:'📋',
+                    md:'📝', txt:'📄', zip:'📦', jpg:'🖼', jpeg:'🖼', png:'🖼',
+                    pdf:'📕', java:'☕', cpp:'⚙️', c:'⚙️', sh:'🖥', env:'🔒',
+                    sql:'🗄', xml:'📰', yaml:'⚙️', yml:'⚙️', gitignore:'🚫' };
+      return map[ext] || '📄';
+    }
+
+    function closeModal(e) {
+      if (e.target === document.getElementById('projectModal'))
+        document.getElementById('projectModal').classList.remove('open');
+    }
+
+    function closeModal(e) {
+      if (e.target === document.getElementById('projectModal'))
+        document.getElementById('projectModal').classList.remove('open');
+    }
+
+    function switchNature(val) {
+      const sw = document.getElementById('sw-fields');
+      const hw = document.getElementById('hw-fields');
+      sw.style.display = (val === 'Software' || val === 'Both') ? 'block' : 'none';
+      hw.style.display = (val === 'Hardware' || val === 'Both') ? 'block' : 'none';
+      document.getElementById('lbl-sw').classList.toggle('active', val === 'Software');
+      document.getElementById('lbl-hw').classList.toggle('active', val === 'Hardware');
+      document.getElementById('lbl-both').classList.toggle('active', val === 'Both');
+    }
+
+    function addMember() {
+      const list = document.getElementById('members-list');
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      row.innerHTML = '<input name="member_name" placeholder="Member name" style="flex:2">'
+        + '<input name="member_roll" placeholder="Roll number" style="flex:1">'
+        + '<button type="button" class="btn btn-danger btn-sm" onclick="removeMember(this)" style="flex-shrink:0">✕</button>';
+      list.appendChild(row);
+    }
+
+    function removeMember(btn) {
+      const list = document.getElementById('members-list');
+      if (list.children.length > 1) {
+        btn.closest('.member-row').remove();
+      } else {
+        btn.closest('.member-row').querySelectorAll('input').forEach(i => i.value = '');
+      }
+    }
+
+    function previewZip(input) {
+      const preview = document.getElementById('zip-preview');
+      const nameEl  = document.getElementById('zip-name');
+      const listEl  = document.getElementById('zip-file-list');
+      if (!input.files[0]) { preview.style.display = 'none'; return; }
+      nameEl.textContent = input.files[0].name;
+      listEl.innerHTML = '<span style="color:#8b949e;font-size:0.8rem">📦 ZIP selected — file tree will appear after upload.</span>';
+      preview.style.display = 'block';
+    }
+
+    function switchTab(name, btn) {
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      if (btn) btn.classList.add('active');
+    }
+    function toggleSettings() {
+      document.getElementById('settingsDropdown').classList.toggle('open');
+    }
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.settings-menu'))
+        document.getElementById('settingsDropdown').classList.remove('open');
+    });
+    const urlTab = new URLSearchParams(location.search).get('tab');
+    if (urlTab) {
+      const map = { upload: 0, mine: 1, all: 2 };
+      const btns = document.querySelectorAll('.tab-btn');
+      if (map[urlTab] !== undefined) switchTab(urlTab, btns[map[urlTab]]);
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') document.getElementById('projectModal').classList.remove('open');
+    });
+  </script>
+</body>
+</html>
